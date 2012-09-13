@@ -4,12 +4,14 @@ import Network
 import System.IO
 import Text.Printf
 
+import System.Random
+
 import Data.List
 import System.Exit
  
 server     = "irc.freenode.org"
 port       = 6667
-chan       = "#vidyadev"
+chan       = "#pikadev"
 nick       = "hikatwo"
 owners     = ["Fuuzetsu", "zalzane"]
 t          = "?" -- token
@@ -65,19 +67,42 @@ mpartition m = Message (name m) (msgT m) (ch m) (msg m)
 eval :: Handle -> Message -> IO ()
 eval h (Message na mt ch msg)
     | mt /= "PRIVMSG"                    = return ()
+    | msg == (t ++ "quit")               = ownerEval h (Message na mt ch msg)
+    | "normalfagalert" `isInfixOf` msg   = ownerEval h (Message na mt ch msg)
+    | "languagewaralert" `isInfixOf` msg = ownerEval h (Message na mt ch msg)
     | na `elem` ignores                  = return ()
-    | msg == (t ++ "quit")               = write h "QUIT" ":Exiting" >> exitWith ExitSuccess
     | listenOnly                         = return ()
     | (t ++ "id ") `isPrefixOf` msg      = chanmsg h ch (drop 4 msg) Nothing
+    | (t ++ "checkem") `isInfixOf` msg   = checkem >>= \x -> chanmsg h ch x $ Just na
     | nick `isInfixOf` msg               = chanmsg h ch ">being a faggot" $ Just na
     | otherwise                          = case getTriggerMessage msg triggers of
                                              Just t -> chanmsg h ch t Nothing
                                              Nothing -> return ()
 
+ownerEval :: Handle -> Message -> IO ()
+ownerEval h (Message na mt ch msg)
+    | msg == (t ++ "quit")               = write h "QUIT" ":Exiting" >> exitWith ExitSuccess
+    | "normalfagalert" `isInfixOf` msg    = chanmsg h ch nfa Nothing
+    | "languagewaralert" `isInfixOf` msg  = chanmsg h ch lwa Nothing
+    | otherwise                           = case getTriggerMessage msg triggers of
+                                              Just t -> chanmsg h ch t Nothing
+                                              Nothing -> return ()       
+    where nfa = "☢ !!NORMALFAG DETECTED NORMALFAG DETECTED TREAD WITH CAUTION!! ☢"
+          lwa = "☢ !!LANGUAGE WAR DETECTED LANGUAGE WAR DETECTED RUN FOR THE HILLS!! ☢,1>implying your language isnt shit"
+
 chanmsg :: Handle -> Channel -> String -> Maybe Nickname -> IO ()
 chanmsg h c s Nothing  = write h "PRIVMSG" (c ++ " :" ++ s)
 chanmsg h c s (Just n) = write h "PRIVMSG" (c ++ " :" ++ n ++ ": " ++ s)
 
+checkem :: IO String
+checkem = do x <- getStdRandom $ randomR (0, 99) :: IO Int
+             case x `mod` 11  == 0 of
+               False -> return $ "~" ++ show x ++ "~"
+               True  -> if x == 0 
+                          then return $ cm "00" 
+                          else return . cm $ show x
+                              where cm x = "~" ++ x ++ "~ HOLY SHIT YOU GOT ☢ DOUBLES☢ (ノﾟοﾟ)ノﾐ★゜・。。 ゜゜・。。・゜☆゜・。。・゜゜・。。・゜゜・。。・゜☆゜・。。・゜゜・。。・゜"
+                            
 
 getTriggerMessage :: String -> [Trigger] -> Maybe String
 getTriggerMessage m [] = Nothing
@@ -87,12 +112,13 @@ getTriggerMessage m ((Trigger c k e):ts) = if f (Trigger c k e) then Just e else
 
 triggers :: [Trigger]
 triggers = let s m ks = elem True $ map (\x -> x `isInfixOf` m) ks -- or
-               a m ks = elem False $ map (\x -> x `isInfixOf` m) ks -- and
+               a m ks = not $ elem False $ map (\x -> x `isInfixOf` m) ks -- and
            in
              map (\(c, k, m) -> Trigger c k m) 
                      [ (s, ["g/f", "my gf"], "!!GUYS WANT TO HEAR ABOUT MY GIRLFRIEND SHE MADE ME A ::NODEV:: SHAPED CAKE!!")
                      , (s, ["stallman", "foss"], "!!FOSSFAG DETECTED!! HIDE YOUR WINDOWS BOXES HIDE YOUR SOFTWARE" ++ 
                              "LICENCES THE GPLOSERS ARE COMING FOR YOU")
                      , (a, ["ufeff", "morgawr"], "morgawr is a fag")
+                     , (a, [t ++ "linkinpark"], "WHY DONT YOU PEOPLE UNDERSTAND MY PAIN (ノ °益°)ノ︵ (\\_.o.)\\")
                      ]
 
