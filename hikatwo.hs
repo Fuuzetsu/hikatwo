@@ -5,8 +5,10 @@ import System.IO
 import Text.Printf
 
 import System.Random
+import System.Directory
 
 import Data.List
+import Data.String.Utils (replace)
 import System.Exit
  
 server     = "irc.freenode.org"
@@ -17,11 +19,16 @@ owners     = ["Fuuzetsu", "zalzane"]
 t          = "?" -- token
 listenOnly = False
 
+rFile :: FilePath -> IO [String]
+rFile f = readFile f >>= \x -> return $ lines x -- bulletproof
+                 
+
 ignores :: [Nickname]
 ignores = [nick, "bro-bot", "bro-bot-indev", "pikatwo", "StreamBot[dev]"]
 
 type Channel = String
 type Nickname = String
+
 data Trigger = Trigger { combin   :: (String -> [String] -> Bool)
                        , keywords :: [String]
                        , text     :: String
@@ -74,14 +81,14 @@ eval h (Message na mt ch msg)
     | listenOnly                         = return ()
     | (t ++ "id ") `isPrefixOf` msg      = chanmsg h ch (drop 4 msg) Nothing
     | (t ++ "checkem") `isInfixOf` msg   = checkem >>= \x -> chanmsg h ch x $ Just na
-    | nick `isInfixOf` msg               = chanmsg h ch ">being a faggot" $ Just na
+    | nick `isInfixOf` msg               = nameRoll >>= \x -> chanmsg h ch x $ Just na
     | otherwise                          = case getTriggerMessage msg triggers of
                                              Just t -> chanmsg h ch t Nothing
                                              Nothing -> return ()
 
 ownerEval :: Handle -> Message -> IO ()
 ownerEval h (Message na mt ch msg)
-    | msg == (t ++ "quit")               = write h "QUIT" ":Exiting" >> exitWith ExitSuccess
+    | msg == (t ++ "quit")                = write h "QUIT" ":Exiting" >> exitWith ExitSuccess
     | "normalfagalert" `isInfixOf` msg    = chanmsg h ch nfa Nothing
     | "languagewaralert" `isInfixOf` msg  = chanmsg h ch lwa Nothing
     | otherwise                           = case getTriggerMessage msg triggers of
@@ -90,6 +97,14 @@ ownerEval h (Message na mt ch msg)
     where nfa = "☢ !!NORMALFAG DETECTED NORMALFAG DETECTED TREAD WITH CAUTION!! ☢"
           lwa = "☢ !!LANGUAGE WAR DETECTED LANGUAGE WAR DETECTED RUN FOR THE HILLS!! ☢,1>implying your language isnt shit"
 
+nameRoll :: IO String
+nameRoll =  do ns <- rFile "usernames"
+               ss <- rFile "sentences"
+               rn <- randomRIO (0, length ns - 1)
+               rs <- randomRIO (0, length (map (f (ns !! rn)) ss) - 1)
+               return $ (map (f (ns !! rn)) ss) !! rs
+                   where f n s = replace "$%$" n s
+               
 chanmsg :: Handle -> Channel -> String -> Maybe Nickname -> IO ()
 chanmsg h c s Nothing  = write h "PRIVMSG" (c ++ " :" ++ s)
 chanmsg h c s (Just n) = write h "PRIVMSG" (c ++ " :" ++ n ++ ": " ++ s)
