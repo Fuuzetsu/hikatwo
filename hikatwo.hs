@@ -3,6 +3,7 @@ module Main (main) where
 import Network
 import System.IO
 import Text.Printf
+import Control.Monad (forever)
 
 import System.Random
 import System.Directory
@@ -29,7 +30,7 @@ ignores = [nick, "bro-bot", "bro-bot-indev", "pikatwo", "StreamBot[dev]"]
 type Channel = String
 type Nickname = String
 
-data Trigger = Trigger { combin   :: (String -> [String] -> Bool)
+data Trigger = Trigger { combin   :: String -> [String] -> Bool
                        , keywords :: [String]
                        , text     :: String
                        }
@@ -60,7 +61,6 @@ listen h = forever $ do
     if ping s then pong s else eval h (mpartition s)
     putStrLn s
   where
-    forever a = a >> forever a
     ping x         = "PING :" `isPrefixOf` x
     pong x         = write h "PONG" (':' : drop 6 x)
 
@@ -88,7 +88,7 @@ eval h (Message na mt ch msg)
 
 ownerEval :: Handle -> Message -> IO ()
 ownerEval h (Message na mt ch msg)
-    | msg == (t ++ "quit")                = write h "QUIT" ":Exiting" >> exitWith ExitSuccess
+    | msg == (t ++ "quit")                = write h "QUIT" ":Exiting" >> exitSuccess
     | "normalfagalert" `isInfixOf` msg    = chanmsg h ch nfa Nothing
     | "languagewaralert" `isInfixOf` msg  = chanmsg h ch lwa Nothing
     | otherwise                           = case getTriggerMessage msg triggers of
@@ -102,8 +102,8 @@ nameRoll =  do ns <- rFile "usernames"
                ss <- rFile "sentences"
                rn <- randomRIO (0, length ns - 1)
                rs <- randomRIO (0, length (map (f (ns !! rn)) ss) - 1)
-               return $ (map (f (ns !! rn)) ss) !! rs
-                   where f n s = replace "$%$" n s
+               return $ map (f (ns !! rn)) ss !! rs
+                   where f = replace "$%$"
                
 chanmsg :: Handle -> Channel -> String -> Maybe Nickname -> IO ()
 chanmsg h c s Nothing  = write h "PRIVMSG" (c ++ " :" ++ s)
@@ -121,13 +121,13 @@ checkem = do x <- getStdRandom $ randomR (0, 99) :: IO Int
 
 getTriggerMessage :: String -> [Trigger] -> Maybe String
 getTriggerMessage m [] = Nothing
-getTriggerMessage m ((Trigger c k e):ts) = if f (Trigger c k e) then Just e else getTriggerMessage m ts
+getTriggerMessage m (Trigger c k e:ts) = if f (Trigger c k e) then Just e else getTriggerMessage m ts
     where f (Trigger x y _) = x m y
 
 
 triggers :: [Trigger]
-triggers = let s m ks = elem True $ map (\x -> x `isInfixOf` m) ks -- or
-               a m ks = not $ elem False $ map (\x -> x `isInfixOf` m) ks -- and
+triggers = let s m ks = elem True $ map (`isInfixOf` m) ks -- or
+               a m ks = notElem False $ map (`isInfixOf` m) ks -- and
            in
              map (\(c, k, m) -> Trigger c k m) 
                      [ (s, ["g/f", "my gf"], "!!GUYS WANT TO HEAR ABOUT MY GIRLFRIEND SHE MADE ME A ::NODEV:: SHAPED CAKE!!")
