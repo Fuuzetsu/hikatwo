@@ -14,7 +14,7 @@ import System.Exit
  
 server     = "irc.freenode.org"
 port       = 6667
-chan       = "#pikadev"
+chan       = "#vidyadev"
 nick       = "hikatwo"
 owners     = ["Fuuzetsu", "zalzane"]
 t          = "?" -- token
@@ -121,8 +121,7 @@ checkem = do x <- getStdRandom $ randomR (0, 99) :: IO Int
 
 getTriggerMessage :: String -> [Trigger] -> Maybe String
 getTriggerMessage m [] = Nothing
-getTriggerMessage m (Trigger c k e:ts) = if f (Trigger c k e) then Just e else getTriggerMessage m ts
-    where f (Trigger x y _) = x m y
+getTriggerMessage m (Trigger c k e:ts) = if c m k then Just e else getTriggerMessage m ts
 
 
 triggers :: [Trigger]
