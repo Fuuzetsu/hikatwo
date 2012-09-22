@@ -101,9 +101,8 @@ nameRoll :: IO String
 nameRoll =  do ns <- rFile "usernames"
                ss <- rFile "sentences"
                rn <- randomRIO (0, length ns - 1)
-               rs <- randomRIO (0, length (map (f (ns !! rn)) ss) - 1)
-               return $ map (f (ns !! rn)) ss !! rs
-                   where f = replace "$%$"
+               rs <- randomRIO (0, length (map (replace "$%$" (ns !! rn)) ss) - 1)
+               return $ map (replace "$%$" (ns !! rn)) ss !! rs
                
 chanmsg :: Handle -> Channel -> String -> Maybe Nickname -> IO ()
 chanmsg h c s Nothing  = write h "PRIVMSG" (c ++ " :" ++ s)
