@@ -17,7 +17,7 @@ port       = 6667
 chan       = "#vidyadev"
 nick       = "hikatwo"
 owners     = ["Fuuzetsu", "zalzane"]
-t          = "?" -- token
+t          = ".:" -- token
 listenOnly = False
 
 rFile :: FilePath -> IO [String]
@@ -81,7 +81,7 @@ eval h (Message na mt ch msg)
     | listenOnly                         = return ()
     | (t ++ "id ") `isPrefixOf` msg      = chanmsg h ch (drop 4 msg) Nothing
     | (t ++ "checkem") `isInfixOf` msg   = checkem >>= \x -> chanmsg h ch x $ Just na
-    | nick `isInfixOf` msg               = nameRoll >>= \x -> chanmsg h ch x $ Just na
+    | nick `isInfixOf` msg               = sentenceRoll na >>= \x -> chanmsg h ch x $ Nothing
     | otherwise                          = case getTriggerMessage msg triggers of
                                              Just t -> chanmsg h ch t Nothing
                                              Nothing -> return ()
@@ -97,12 +97,10 @@ ownerEval h (Message na mt ch msg)
     where nfa = "☢ !!NORMALFAG DETECTED NORMALFAG DETECTED TREAD WITH CAUTION!! ☢"
           lwa = "☢ !!LANGUAGE WAR DETECTED LANGUAGE WAR DETECTED RUN FOR THE HILLS!! ☢,1>implying your language isnt shit"
 
-nameRoll :: IO String
-nameRoll =  do ns <- rFile "usernames"
-               ss <- rFile "sentences"
-               rn <- randomRIO (0, length ns - 1)
-               rs <- randomRIO (0, length (map (replace "$%$" (ns !! rn)) ss) - 1)
-               return $ map (replace "$%$" (ns !! rn)) ss !! rs
+sentenceRoll :: Nickname -> IO String
+sentenceRoll n =  do ss <- rFile "sentences"
+                     rs <- randomRIO (0, length ss - 1)
+                     return $ replace "$%$" n $ ss !! rs
                
 chanmsg :: Handle -> Channel -> String -> Maybe Nickname -> IO ()
 chanmsg h c s Nothing  = write h "PRIVMSG" (c ++ " :" ++ s)
