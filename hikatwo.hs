@@ -19,13 +19,14 @@ nick       = "hikatwo"
 owners     = ["Fuuzetsu", "zalzane"]
 t          = ".:" -- token
 listenOnly = False
+sayShite   = False
 
 rFile :: FilePath -> IO [String]
 rFile f = readFile f >>= \x -> return $ lines x -- bulletproof
                  
 
 ignores :: [Nickname]
-ignores = [nick, "bro-bot", "bro-bot-indev", "pikatwo", "StreamBot[dev]"]
+ignores = [nick, "bro-bot", "bro-bot-indev", "pikatwo", "StreamBot[dev]", "privilegebot"]
 
 type Channel = String
 type Nickname = String
@@ -118,7 +119,7 @@ checkem = do x <- getStdRandom $ randomR (0, 99) :: IO Int
 
 getTriggerMessage :: String -> [Trigger] -> Maybe String
 getTriggerMessage m [] = Nothing
-getTriggerMessage m (Trigger c k e:ts) = if c m k then Just e else getTriggerMessage m ts
+getTriggerMessage m (Trigger c k e:ts) = if c m k && sayShite then Just e else getTriggerMessage m ts
 
 
 triggers :: [Trigger]
