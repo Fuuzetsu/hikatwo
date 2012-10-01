@@ -3,7 +3,8 @@ module Main (main) where
 import Network
 import System.IO
 import Text.Printf
-import Control.Monad (forever)
+import Control.Monad (forever, liftM2)
+import Control.Applicative ((<$>))
 
 import System.Random
 import System.Directory
@@ -21,9 +22,13 @@ t          = ".:" -- token
 listenOnly = False
 sayShite   = False
 
-rFile :: FilePath -> IO [String]
-rFile f = readFile f >>= \x -> return $ lines x -- bulletproof
-                 
+toMaybe :: Bool -> a -> Maybe a
+toMaybe False _ = Nothing
+toMaybe True a  = Just a
+
+rFile :: FilePath -> IO (Maybe [String])
+rFile =  liftM2 (>>=) doesFileExist $
+  flip fmap (flip fmap lines . toMaybe) . flip fmap . readFile
 
 ignores :: [Nickname]
 ignores = [nick, "bro-bot", "bro-bot-indev", "pikatwo", "StreamBot[dev]", "privilegebot"]
@@ -99,7 +104,7 @@ ownerEval h (Message na mt ch msg)
           lwa = "☢ !!LANGUAGE WAR DETECTED LANGUAGE WAR DETECTED RUN FOR THE HILLS!! ☢,1>implying your language isnt shit"
 
 sentenceRoll :: Nickname -> IO String
-sentenceRoll n =  do ss <- rFile "sentences"
+sentenceRoll n =  do Just ss <- rFile "sentences"
                      rs <- randomRIO (0, length ss - 1)
                      return $ replace "$%$" n $ ss !! rs
                
