@@ -94,6 +94,7 @@ eval h (Message na mt ch msg)
 
 ownerEval :: Handle -> Message -> IO ()
 ownerEval h (Message na mt ch msg)
+    | not $ na `elem` owners              = return () 
     | msg == (t ++ "quit")                = write h "QUIT" ":Exiting" >> exitSuccess
     | "normalfagalert" `isInfixOf` msg    = chanmsg h ch nfa Nothing
     | "languagewaralert" `isInfixOf` msg  = chanmsg h ch lwa Nothing
